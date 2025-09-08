@@ -1,8 +1,9 @@
 import { Button } from './button';
 import { FaArrowUp } from 'react-icons/fa';
 import { useForm } from 'react-hook-form';
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 
 type FormData = {
    prompt: string;
@@ -19,16 +20,23 @@ const ChatBot = () => {
    const [messages, setMessages] = useState<Message[]>([]);
    const conversationId = useRef(crypto.randomUUID());
    const { register, handleSubmit, reset, formState } = useForm<FormData>();
+   const [isBotTyping, setIsBotTyping] = useState(false);
+   const lastMessageRef = useRef<HTMLDivElement | null>(null);
 
+   useEffect(() => {
+      lastMessageRef.current?.scrollIntoView({ behavior: 'smooth' });
+   }, [messages]);
    const onSubmit = async ({ prompt }: FormData) => {
-      reset();
+      reset({prompt: ''});
       setMessages((prev) => [...prev, { content: prompt, role: 'User' }]);
+      setIsBotTyping(true);
       const { data } = await axios.post<ChatResponse>('/api/chat', {
          prompt,
          conversationId: conversationId.current,
       });
 
       setMessages((prev) => [...prev, { content: data.message, role: 'Bot' }]);
+      setIsBotTyping(false);
    };
 
    const onKeyDown = (e: KeyboardEvent<HTMLFormElement>) => {
@@ -37,21 +45,37 @@ const ChatBot = () => {
          handleSubmit(onSubmit)();
       }
    };
+   const onCopyMessage = (e: React.ClipboardEvent<HTMLParagraphElement>) => {
+      const selection = window.getSelection()?.toString().trim();
+      if (selection) {
+         e.preventDefault();
+         e.clipboardData.setData("text/plain", selection);
+      }
+   };
    return (
-      <div>
-         <div className="flex flex-col gap-2 mb-10">
+      <div className='flex flex-col h-full'>
+         <div className="flex flex-col flex-1 gap-3 mb-10 overflow-y-auto">
             {messages.map((message, index) => (
-               <p
+               <div
                   key={index}
+                  onCopy={onCopyMessage}
+                  ref={index === messages.length - 1 ? lastMessageRef : null}
                   className={`px-3 py-1 rounded-xl ${
                      message.role === 'User'
                         ? 'bg-blue-600 text-white self-end'
                         : 'bg-gray-100 text-black self-start'
                   }`}
                >
-                  {message.content}
-               </p>
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+               </div>
             ))}
+            {isBotTyping && (
+               <div className="flex gap-1 px-3 py-3 bg-gray-200 rounded-xl self-start">
+                  <div className="w-2 h-2 rounded-full bg-gray-800 animate-pulse"></div>
+                  <div className="w-2 h-2 rounded-full bg-gray-800 animate-pulse [animation-delay:0.2s]"></div>
+                  <div className="w-2 h-2 rounded-full bg-gray-800 animate-pulse [animation-delay:0.4s]"></div>
+               </div>
+            )}
          </div>
          <form
             onSubmit={handleSubmit(onSubmit)}
