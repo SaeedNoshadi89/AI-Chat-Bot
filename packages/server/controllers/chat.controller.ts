@@ -22,7 +22,7 @@ export const chatController = {
          const { prompt, conversationId } = req.body;
 
          const response = await chatService.sendMessage(prompt, conversationId);
-         res.json({ mesage: response.message });
+         res.json({ message: response.message });
       } catch (error) {
          res.status(500).json({ error: 'wrong model' });
       }
