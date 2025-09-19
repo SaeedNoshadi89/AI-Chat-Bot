@@ -1,5 +1,4 @@
 import './App.css';
-import { Button } from './components/ui/button';
 import ChatBot from './components/ui/ChatBot';
 
 function App() {
